@@ -253,6 +253,7 @@ Dockerfile examples
 Пример, когда сработает как надо
 
 .. code:: console
+
         FROM debian:wheezy
         RUN useradd foo
         RUN mkdir /data && touch /data/x

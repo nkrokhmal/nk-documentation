@@ -87,7 +87,8 @@
 <li class="toctree-l2"><a class="reference internal" href="#docker-important">Docker important</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#docker-naming">Docker naming</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#docker-flags">Docker flags</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#docker-commands">Docker commands</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#docker-commands">Docker commands</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#dockerfile-examples">Dockerfile examples</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#hello">Hello</a></li>
 </ul>
 </li>
@@ -222,7 +223,16 @@
 </div>
 <div class="section" id="docker-flags">
 <h2>Docker flags<a class="headerlink" href="#docker-flags" title="Permalink to this headline">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">-a,</span> <span class="pre">-attach</span></code> - прикрепляет данный стрим в терминал</p>
+<p><code class="docutils literal notranslate"><span class="pre">-d,</span> <span class="pre">-detach</span></code> - запуск контенйера на фоне</p>
+<p><code class="docutils literal notranslate"><span class="pre">-i,</span> <span class="pre">--interactive</span></code> - сохраняет stdin открытым, обычно используется с <code class="docutils literal notranslate"><span class="pre">-t</span></code> чтобы начать интерактивную сессию с контейнером</p>
+<p><code class="docutils literal notranslate"><span class="pre">--restart</span></code> - определяет количество раз рестарта, пример применения - <code class="docutils literal notranslate"><span class="pre">--restart</span> <span class="pre">on-failure:10</span> <span class="pre">postgres</span></code> - запускает контейнер постгреса и пытается рестаровать 10 раз если случается ошибка</p>
+<p><code class="docutils literal notranslate"><span class="pre">--rm</span></code> - удаляет контейнер, если он существует. Не может использоваться с <code class="docutils literal notranslate"><span class="pre">-d</span></code></p>
+<p><code class="docutils literal notranslate"><span class="pre">-e,</span> <span class="pre">--env</span></code> - задание переменных окружения внутри контейнера, пример использования <code class="docutils literal notranslate"><span class="pre">sudo</span> <span class="pre">docker</span> <span class="pre">tun</span> <span class="pre">-e</span> <span class="pre">var1-val</span> <span class="pre">-e</span> <span class="pre">var2=&quot;val</span> <span class="pre">2&quot;</span> <span class="pre">debian</span> <span class="pre">env</span></code></p>
 <p><code class="docutils literal notranslate"><span class="pre">-h</span></code>, <code class="docutils literal notranslate"><span class="pre">--hostname</span></code> - определяет имя хоста</p>
+<p><code class="docutils literal notranslate"><span class="pre">--expose</span></code> - эквивалентно EXPOSE в докерфайле, определяет порт, используемый контейнером, но не открывает его.</p>
+<p><code class="docutils literal notranslate"><span class="pre">-p,</span> <span class="pre">--publish</span></code> - публикация порта контейнера, делает кго доступным с хоста.</p>
+<p><code class="docutils literal notranslate"><span class="pre">--entrypoint</span></code> - устанавливает entrypoint для контейнера с заданными аргументами, переопределяет ENTRYPOINT инструкцию в докерфайле</p>
 <p><code class="docutils literal notranslate"><span class="pre">-d</span></code> - запуск контейнера в фоновом режиме</p>
 <p><code class="docutils literal notranslate"><span class="pre">-n</span></code>, <code class="docutils literal notranslate"><span class="pre">--name</span></code> - задание имени контейнера</p>
 <p><code class="docutils literal notranslate"><span class="pre">--link</span></code> - соеднинение двух контейнеров</p>
@@ -231,6 +241,7 @@
 <p><code class="docutils literal notranslate"><span class="pre">-P</span></code> - выбор произвольного порта при запуске контейнера</p>
 <p><code class="docutils literal notranslate"><span class="pre">-p</span></code> - выбор указанного порта при запуске контейнера</p>
 <p><code class="docutils literal notranslate"><span class="pre">-icc=false</span> <span class="pre">and</span> <span class="pre">--iptables</span></code> - контейнера нельзя подсоединять к другим</p>
+<p><code class="docutils literal notranslate"><span class="pre">-v</span></code> - флаг с volume, при удалении контейнера удаляет и volume</p>
 </div>
 <div class="section" id="docker-commands">
 <h2>Docker commands<a class="headerlink" href="#docker-commands" title="Permalink to this headline">¶</a></h2>
@@ -260,8 +271,60 @@
 </div>
 <p>При этом –link name:alias.name, alias - имя под которым этот контейнер будет известен запускаемому
 Это приводит к тому, что в контейнере web появится набор переменных окружения, указывающих на контейнер db + в /etc/hosts контейнера web появится алиас db указывающий на ip, на котором запустили контейнер с базой данных.</p>
-<p>Определение volume</p>
+<p>Определение volume и указание папки на хосте</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$</span> docker run -it --name container-test -h CONtAINER -v /data debian /bin/bash
+<span class="gp">$</span> docker run -v /home/data:/data debian ls /data
+</pre></div>
+</div>
+<p>Attach команда позволяет пользователям просматривать или взаимодействовать с основным процеммом внутри контейнера</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$</span> docker attach <span class="nv">$ID</span>
+</pre></div>
+</div>
+<p>Create команда создает контейнер из образа, но не запускает его. Принимает ровно те же аргументы, что и docker run.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$</span> docker create image
+</pre></div>
+</div>
+<p>Cp копирует файлы и директории между контейнером и хостом</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$</span> docker cp
+</pre></div>
+</div>
+<p>Exec запускает команды внутри контейнера, по сути замена ssh для входа в контейнер</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$</span> docker <span class="nb">exec</span> -it <span class="nb">echo</span> <span class="s2">&quot;Hello&quot;</span>
+</pre></div>
+</div>
+<p>Kill - отправялет сигнал главному процессу в контейнер, по дефолту отправляет сигнал, который убивает контейнер.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$</span> docker <span class="nb">kill</span> -s SIGRAP container_id
+<span class="gp">$</span> docker <span class="nb">kill</span> container_id
+</pre></div>
+</div>
+<p>Pause - приостанавливает все процессы внутри данного контейнера, перезапускается с помощью unpause</p>
+<p>Top - обеспечивает информацию о запущенных процессах внутри контейнера.</p>
+<p>tag - связывает репозиторий и имя тега образа</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$</span> docker tag newname:latest name/newname:latest
+</pre></div>
+</div>
+</div>
+<div class="section" id="dockerfile-examples">
+<h2>Dockerfile examples<a class="headerlink" href="#dockerfile-examples" title="Permalink to this headline">¶</a></h2>
+<p>Примеры с volume. Надо отметить, что все инструкции после VOLUME инструкции не могут изменять этот volume</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">FROM debian:wheezy</span>
+<span class="go">VOLUME /data</span>
+</pre></div>
+</div>
+<p>Пример, когда команды не сработают</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">FROM debian:wheezy</span>
+<span class="go">RUN useradd foo</span>
+<span class="go">VOLUME /data</span>
+<span class="go">RUN touch /data/x</span>
+<span class="go">RUN chown -R foo:foo /data</span>
+</pre></div>
+</div>
+<p>Пример, когда сработает как надо</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">FROM debian:wheezy</span>
+<span class="go">RUN useradd foo</span>
+<span class="go">RUN mkdir /data &amp;&amp; touch /data/x</span>
+<span class="go">RUN chown -R foo:foo /data</span>
+<span class="go">VOLUME /data</span>
 </pre></div>
 </div>
 <div class="section" id="hello">

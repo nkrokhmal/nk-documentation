@@ -94,7 +94,25 @@ Docker naming
 Docker flags
 ^^^^^^^^^^^^
 
+``-a, -attach`` - прикрепляет данный стрим в терминал
+
+``-d, -detach`` - запуск контенйера на фоне
+
+``-i, --interactive`` - сохраняет stdin открытым, обычно используется с ``-t`` чтобы начать интерактивную сессию с контейнером
+
+``--restart`` - определяет количество раз рестарта, пример применения - ``--restart on-failure:10 postgres`` - запускает контейнер постгреса и пытается рестаровать 10 раз если случается ошибка
+
+``--rm`` - удаляет контейнер, если он существует. Не может использоваться с ``-d``
+
+``-e, --env`` - задание переменных окружения внутри контейнера, пример использования ``sudo docker tun -e var1-val -e var2="val 2" debian env``
+
 ``-h``, ``--hostname`` - определяет имя хоста
+
+``--expose`` - эквивалентно EXPOSE в докерфайле, определяет порт, используемый контейнером, но не открывает его. 
+
+``-p, --publish`` - публикация порта контейнера, делает кго доступным с хоста.
+
+``--entrypoint`` - устанавливает entrypoint для контейнера с заданными аргументами, переопределяет ENTRYPOINT инструкцию в докерфайле
 
 ``-d`` - запуск контейнера в фоновом режиме
 
@@ -111,6 +129,8 @@ Docker flags
 ``-p`` - выбор указанного порта при запуске контейнера
 
 ``-icc=false and --iptables`` - контейнера нельзя подсоединять к другим
+
+``-v`` - флаг с volume, при удалении контейнера удаляет и volume
 
 Docker commands
 ^^^^^^^^^^^^^^^
@@ -157,11 +177,91 @@ Docker commands
 Это приводит к тому, что в контейнере web появится набор переменных окружения, указывающих на контейнер db + в /etc/hosts контейнера web появится алиас db указывающий на ip, на котором запустили контейнер с базой данных.
 
 
-Определение volume
+Определение volume и указание папки на хосте
 
 .. code:: console
         
         $ docker run -it --name container-test -h CONtAINER -v /data debian /bin/bash
+        $ docker run -v /home/data:/data debian ls /data
+
+
+Attach команда позволяет пользователям просматривать или взаимодействовать с основным процеммом внутри контейнера
+
+.. code:: console
+        
+        $ docker attach $ID
+
+Create команда создает контейнер из образа, но не запускает его. Принимает ровно те же аргументы, что и docker run.
+
+.. code:: console
+
+        $ docker create image
+
+Cp копирует файлы и директории между контейнером и хостом
+
+.. code:: console
+
+        $ docker cp
+
+Exec запускает команды внутри контейнера, по сути замена ssh для входа в контейнер
+
+.. code:: console
+        
+        $ docker exec -it echo "Hello"
+
+Kill - отправялет сигнал главному процессу в контейнер, по дефолту отправляет сигнал, который убивает контейнер. 
+
+.. code:: console
+
+        $ docker kill -s SIGRAP container_id
+        $ docker kill container_id
+
+
+Pause - приостанавливает все процессы внутри данного контейнера, перезапускается с помощью unpause
+
+
+Top - обеспечивает информацию о запущенных процессах внутри контейнера.
+
+tag - связывает репозиторий и имя тега образа
+
+.. code:: console
+        
+        $ docker tag newname:latest name/newname:latest
+
+
+
+Dockerfile examples
+^^^^^^^^^^^^^^^^^^^
+
+Примеры с volume. Надо отметить, что все инструкции после VOLUME инструкции не могут изменять этот volume
+
+.. code:: console
+        
+        FROM debian:wheezy
+        VOLUME /data
+
+Пример, когда команды не сработают 
+
+.. code:: console
+        
+        FROM debian:wheezy
+        RUN useradd foo
+        VOLUME /data
+        RUN touch /data/x
+        RUN chown -R foo:foo /data
+
+Пример, когда сработает как надо
+
+.. code:: console
+
+        FROM debian:wheezy
+        RUN useradd foo
+        RUN mkdir /data && touch /data/x
+        RUN chown -R foo:foo /data
+        VOLUME /data
+
+
+
 
 
 Hello
