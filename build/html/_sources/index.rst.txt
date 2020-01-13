@@ -1,4 +1,4 @@
-Welcome to my Documentation's documentation!
+Wlcome to my Documentation's documentation!
 ============================================
 
 .. toctree::

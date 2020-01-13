@@ -54,9 +54,9 @@ def get_git_branch():
 
 # -- Project information -----------------------------------------------------
 
-project = u'Read the Docs Sphinx Theme Examples'
-copyright = u'2018, Read the Docs, Inc & contributors'
-author = u'Read the Docs, Inc & contributors'
+project = u'Documentation'
+copyright = u'2020, NK Documentation'
+author = u'nkrokhmal'
 
 # The short X.Y version
 version = u''
@@ -193,6 +193,8 @@ latex_documents = [
     (master_doc, 'RTDSphinxThemeSample.tex', project,
      u'Read the Docs, Inc \\& contributors', 'manual'),
 ]
+
+latex_engine = 'xelatex'
 
 
 # -- Options for manual page output ------------------------------------------
