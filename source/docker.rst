@@ -237,6 +237,12 @@ tag - связывает репозиторий и имя тега образа
 
         $ docker run -d -p 5000:5000 -v "$(pwd)"/app: /app container_name
 
+Получить информацию об использующихся портах для данного контейнера
+
+.. code:: console
+
+        $ docker port container_name
+
 
 Dockerfile examples
 ^^^^^^^^^^^^^^^^^^^
