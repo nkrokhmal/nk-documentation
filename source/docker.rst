@@ -134,6 +134,7 @@ Docker flags
 
 ``-v`` - флаг с volume, при удалении контейнера удаляет и volume
 
+
 Docker commands
 ^^^^^^^^^^^^^^^
 
@@ -249,6 +250,12 @@ tag - связывает репозиторий и имя тега образа
 
         $ docker ps -q
 
+Уменьшение размера образа за счет того, что контейнер представляется в виде одного слоя
+
+.. code:: console
+
+   $ sudo docker export container_name | docker import -    
+        
 Использование Docker Compose
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

@@ -13,6 +13,12 @@ Wlcome to my Documentation's documentation!
 
    cmdfeatures
 
+.. toctree::
+
+   :maxdepth: 2
+
+   kubernetes
+
 Indices and tables
 ==================
 
