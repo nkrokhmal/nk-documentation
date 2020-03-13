@@ -19,6 +19,12 @@ Wlcome to my Documentation's documentation!
 
    kubernetes
 
+.. toctree::
+   
+   :maxdepth: 2
+
+   nginx
+
 Indices and tables
 ==================
 
