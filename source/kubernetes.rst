@@ -49,6 +49,12 @@ Command
 
         $ kubectl exec podname -- curl -s http://ip
 
+Команда на получение всех endpoints для службы
+
+.. code:: console
+
+        $ kubectl get endpoints kubia
+
 
 
 Help and information
@@ -453,9 +459,138 @@ Services
             targetPort: https
 
 
+DNS
+^^^
 
+Пода с названием `kube-dns` запускает DNS сервер, для использования которого автоматически настравиваются все оставльные модули. Любой DNS запрос будет обрабатываться собственным DNS-сервером Kubernetes, который знает все службы в нашей системе.
+
+Если требуется подключиться к бэкэнд базе данных - надо открыть подключение со следующим доменным именем
+
+``backend-database.default.svc.cluster.local``
+где ``backend-database`` - название service, ``default`` - обозначает namespace, ``svc.cluster.local`` - настраиваемый доменный суффикс кластера, используемый во всем именах локальных служб. 
 
           
+Service endpoints setting
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Иногда бывает необходимым настраивать список endpoints для service вручную.
+Пример YAML файла
+
+.. code:: console
+
+        apiVersion: v1
+        kind: Service
+        metadata:
+          name: external-service
+        spec:
+          ports:
+          - port: 8080
+
+Endpoints представляют из себя отдельный ресурс, а не атрибут службы. И поэтому, если Endpoints не был создан автоматически, его надо создать вручную
+
+.. code:: console
+
+        apiVersion: v1
+        kind: Endpoints
+        metadata: 
+          name: external-service
+        subsets:
+          - adresses:
+            - ip: 11.11.11.11
+            - ip: 22.22.22.22
+            ports:
+            - port: 80
+
+Таким образом имя Endpoint сопадает с названием соответствующего сервиса. После того, как service и endpoints будут отправлены на сервер, service будет готов к использования, как любой service с селектором модулей. Контейнеры, созданные после создания service будут включать переменные окружения для service, и все подключения с парой IP:port будут балансироваться между конечными точками службы.
+
+Так же вместо предоставления доступа внешней служюе путем ручной настройки конечных точек службы более простой способ позовляет ссылаться на внешнюю службу по ее полностью квалифицированному доменному имени. Например, если общедоступный API имеется по адресу `test.com`, то мы можем определить service, который указывает на него
+
+.. code:: console
+
+        apiVersion: v1
+        kind: Service
+        metadata:
+          name: external-service
+        spec:
+          type: ExternalName
+          externalName: test.com
+          ports:
+          - port: 80
+
+Надо отметить, что в качестве externalName не может быть использован IP.
+
+Access to service outside the cluset
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Для того, чтобы внешний клиент мог использовать службу внутри кластера существуют следующие способы
+
+- Присвоить типу service значение NodePort. Каждая нода кластера открывает порт и перенаправляет трафик в базовую службу. Service доступен не только через внутренний IP и порт кластера, но и через выделенный порт на всех узлах
+
+- Присвоить типу service значение LoadBalancer, расширение типа NodePort - это делает службу доступной через выделенный балансировщик нагрузок, зарезервированный из облачной инфраструктуры. Балансировщик нагрузок перенаправляет трафик на порт node во всех nodes. Внешний клиент подключается через IP адрес балансировщика нагрузки
+
+- Создать ресурс Ingress, который работает на уровне HTTP
+
+NodePort
+~~~~~~~~
+
+К service NodePort можно получить доступ не только через внутренний кластреный IP адрес, но и через IP адресс любого узла.
+
+Пример создания service NodePort
+
+.. code:: console
+
+        apiVersion: v1
+        kind: Service
+        metadata:
+          name: kubia-nodeport
+        spec:
+          type: NodePort
+          ports: 
+          - port: 80
+            targetPort: 8080
+            nodePort: 30123
+          selectror:
+            app: kubia
+
+LoadBalancer
+~~~~~~~~~~~~
+
+Балансировщик нагрузку имеет свой IP и все запросы будут идти через него. Пример YAML файла
+
+.. code:: console
+
+        apiVersion: v1
+        kind: Service
+        metadata:
+          name: kubia-loadbalancer
+        spec:
+          type: LoadBalancer
+          ports:
+          - port:80
+            targetPort: 8080
+          selectror:
+            app: kubia
+
+Ingress
+~~~~~~~
+
+Пример YAML файла для Ingress
+
+.. code:: console
+
+        apiVersion: extensions/v1beta1
+        kind: Ingress
+        metadata
+          name: kubia
+        spec:
+          rules:
+          - host: kubia.example.com
+            http:
+              paths:
+              - path: /
+                backend:
+                  serviceName: kubia-nodeport
+                  servicePort: 80
 
 Error codes
 ^^^^^^^^^^^
