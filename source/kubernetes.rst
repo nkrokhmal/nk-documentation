@@ -43,6 +43,14 @@ Command
 
         $ kubectll port-forward test 8888:8080
 
+Команда для выолнения curl запроса изнутри какой-то поды. В этой команде (--) используется для сигнала kubectl об окончании командных параметров
+
+.. code:: console
+
+        $ kubectl exec podname -- curl -s http://ip
+
+
+
 Help and information
 ^^^^^^^^^^^^^^^^^^^^
 
@@ -338,7 +346,116 @@ Job
                 image: testimage 
               
                 
+CronJon
+^^^^^^^
 
+Job запускает свои модули немедленно при создании ресурса Job. Чтобы запускать задачи по расписанию - используется CronJob. Пример YAML файла для создания CronJob
+
+.. code:: console
+
+        apiVersion: apps/v1beta1
+        kind: CronJob
+        metadata:
+          name: batch-job-every-fifteen-minutes
+        spec:
+          schedule: "0,15,30,45 * * * *"
+          startingDeadlineSeconds: 15
+          jobTemplate:
+            spec:
+              template:
+                metadata:
+                  labels:
+                    app: periodic-batch-job
+                spec:
+                  restartPolicy: OnFailure
+                  containers:
+                  - name: main
+                    image: luksa/batch-job
+
+
+Services
+^^^^^^^^
+
+Сервсиы необходимы для того, чтобы сформировать единую постоянную точку входа в группу модулей, предоставляющих одну и то жуе службу.
+
+Пример YAML файла для создания service
+
+.. code:: console
+
+        apiVersion: v1
+        kind: Service
+        metadata:
+          name: kubia
+        spec:
+          ports: 
+          - port: 80
+            targetPort: 8080
+          selector:
+            app: kubia
+
+Данная служба принимает подключение по 80 порту и маршрутизирует каждое подключение на порт 8080 оного из модулей, у которого есть отметка app=kubia
+
+Для того, чтобы все запросы, сделанные определенным клиентом, каждый раз перенаправлялись в один и тот же модуль - то свойству sessionAffinity службы можно присвлить значение ClientIp
+
+.. code:: console
+
+        apiVersion: v1
+        kind: Service
+        spec:
+          sessionAffinity: ClientIp
+
+Это заставляет служебный прокси перенаправлять все запросы, исходящие от того же клиентского IP адреса на ту же поду.  Kubernetes поддерживает тоглько два типа сохранения сессии - None и ClientIp.
+
+Службы могут поддерживать доступ к нескольким портам. Пример YAML файла, который поддерживает это приведен ниже
+
+.. code:: console
+
+        apiVersion: v1
+        kind: Service
+        metadata:
+          name: kubia
+        spec:
+          ports:
+          - name: http
+            port: 80
+            targetPort: 8080
+          - name: https
+            port:433
+            targetPort:8443
+          selector:
+            app: kubia
+
+Кроме того можно ссылаться не только на номера портов, но также на их имена. Предположим, что в поде определены уже порты на примере
+
+.. code:: console
+        
+        ...
+        kind: Pod
+        spec:
+          containers:
+          - name: kubia
+            ports:
+            - name: http
+              containerPort: 8080
+            - name: https
+              containerPort: 8443
+        ...
+
+        apiVersion: v1
+        kind: Service
+        spec:
+          ports:
+          - name: http
+            port: 8080
+            targetPort: http
+          - name: https
+            port: 8433
+            targetPort: https
+
+
+
+
+          
 
 Error codes
 ^^^^^^^^^^^
