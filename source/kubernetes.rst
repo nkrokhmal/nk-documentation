@@ -43,7 +43,7 @@ Command
 
         $ kubectll port-forward test 8888:8080
 
-Команда для выолнения curl запроса изнутри какой-то поды. В этой команде (--) используется для сигнала kubectl об окончании командных параметров
+Команда для выполнения curl запроса изнутри какой-то поды. В этой команде (`--`) используется для сигнала kubectl об окончании командных параметров
 
 .. code:: console
 
@@ -80,7 +80,7 @@ Help and information
 Labels (Метки)
 ^^^^^^^^^^^^^^
 
-Информация о пода с учетом определенных меток
+Информация о подe с учетом определенных меток
 
 .. code:: console
 
@@ -215,12 +215,12 @@ Replication controller
             metadata:
               labels:
                 app: test
-          spec:
-            containers:
-            - name: test
-              image: test
-              ports:
-              - containerPort: 8080
+            spec:
+              containers:
+              - name: test
+                image: test
+                ports:
+                - containerPort: 8080
 
 
 Удаление контроллера репликаций без затрагивания под (они перестанут быть управляемыми)
@@ -304,12 +304,12 @@ DaemonSet требуется для того, чтобы точно опреде
             metadata:
               labels:
                 app: ssd-monitor
-          spec:
-            nodeSelector:
-              disk: ssd
-            container: 
-            - name: main
-              image: luksa/ssd-monitor
+            spec:
+              nodeSelector:
+                disk: ssd
+              container: 
+              - name: main
+                image: luksa/ssd-monitor
 
 Job
 ^^^
