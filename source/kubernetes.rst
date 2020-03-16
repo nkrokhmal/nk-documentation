@@ -459,6 +459,30 @@ Services
             targetPort: https
 
 
+Службы без обозначенной точки входа
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Чтобы создать service без обозначенной точки входа (Headless), требуется присвоить полю clusterIp значение None. 
+
+.. code:: console
+
+        apiVersion: v1
+        kind: Service
+        metadata: 
+          name: kubia-headless
+        spec:
+          clusterIp: None
+          ports:
+          - port: 80
+            targetPort: 8080
+          selector:
+            app: kubia
+
+Headless service нужны для того, чтобы клиенты подключались непосредственно к модулям, а не через служебный прокси.
+
+
+
+
 DNS
 ^^^
 
@@ -591,6 +615,140 @@ Ingress
                 backend:
                   serviceName: kubia-nodeport
                   servicePort: 80
+
+Проверка готовности
+^^^^^^^^^^^^^^^^^^^
+
+Проверка готовности отличается от Liveness тем, что если пода не прошла проверку готовности, то в таком случае она не удаляется, а удаляется Endpoint.
+Пример YAML файла с проверкой готовности
+
+.. code:: console
+
+        apiVersion: v1
+        kind: ReplicationController
+        ...
+        spec:
+          ...
+          template:
+            spec:
+              containers: 
+              - name: kubia
+                image: luksa/kubia
+                readinessProbe:
+                  exec:
+                    command:
+                    - ls
+                    - var/ready
+          ...
+
+В этом примере проверка готовности будет переодически выполнять команду ls /var/ready внутри контейнера. 
+
+
+Тома
+^^^^
+
+Использование тома emptyDir
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Этот том начинается как пустой каталог. Приложение запущенное внутри модуля, может записывать любые файлы, которые ему нужны. Когда пода умирает - содержимое тома удаляется. Полезен для обмена файлами между контейнерами, запущенными на одной поде. 
+
+Пример ииспользования emptyDir в поде. В качестве веб-сервера будет выступаить Nginx, для создания HTML-контента будет использоваться команда `fortune` системы Unix. Будет создан скрипт, который будет вызывать команду `fortune` каждый 10 секунд и сохранять результат в файле index.html. 
+
+.. code:: console
+
+        apiVersion: v1
+        kind: Pod
+        metadata: 
+          name: fortune
+        spec:
+          containers: 
+          - image: luksa/fortune
+            name: html-generator
+            volumeMounts:
+            - name: html
+              mountPath: /var/htdocs
+          - image: nginx:alpine
+            name: web-server
+            volumeMounts: 
+            - name: html
+              mountPath: /usr/share/nginx/html
+              readOnly: true
+            ports:
+            - containerPort: 80
+              protocol: TCP
+          volumes:
+          - name: html
+            empryDir: {}
+
+Чтобы создать  `emptyDir` в файловой системе `tmpfs` (в памяти, а не на диске), достаточно присвить свойство `medium: Memory` 
+
+.. code:: console
+
+        volumes:
+        - name: html
+          emptyDir:
+            medium: Memory
+
+Использование тома gitRepo
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+По сути то же самое, что и emptyDir, но только в том клонируется проект на гите. Важно отметить, что можно клонировать только открытые репозитории, с приватными подобный механизм не работает. 
+
+.. code:: console
+
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          name: gitrepo-volume-pod
+        spec:
+          containers:
+          - image: nginx:alpine
+            name: web-server
+            volumeMounts:
+            - name: html
+              mountPath: /usr/share/nginx/html
+              readOnly: true
+            ports:
+            - port: 80
+              protocol: TCP
+          volumes: 
+          - name: html
+            gitRepo:
+              repository: https://github.com/...
+              revision: master
+              directory: .
+            
+Использование тома hotPath
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Том hostPath указывает на определенный файл или каталог в файловой системе узла. Модули, работающие на одном узле и использующие один и тот же путь в томе hostPath видят одни и те же файлы. Надо отметить, что при удалении поды, файлы в hostPath остаются неизменными. Чаще всего сюда просто складываются логи. 
+
+Использование постоянного диска GCE Persistent Disk
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Для этого необходимо вначале создать диск в той же зоне, где размещен и кластер.Здесь приведен пример с Google, аналогично, если речь идет про Azure надо использовать azureDisk.  Пример YAML файла
+
+.. code:: console
+
+        apiVersion: v1
+        kind: Pod
+        metadata: 
+          name: mongodb
+        spec:
+          volumes: 
+          - name: mongodb-disk
+            gcePersistentDisk:
+              pdName: mongodb
+              fsType: ext4
+          containers:
+          - image: mongo
+            name: mongodb
+            volumeMounts:
+            - name: mongodb-data
+              mountPath: /data/db
+            ports:
+            - containerPort: 27017
+              protocol: TCP
 
 Error codes
 ^^^^^^^^^^^
