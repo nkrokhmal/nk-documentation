@@ -55,6 +55,11 @@ Command
 
         $ kubectl get endpoints kubia
 
+Вывод всех классов хранилищ
+
+.. code:: console
+
+        kubectl get sc
 
 
 Help and information
@@ -749,6 +754,121 @@ Ingress
             ports:
             - containerPort: 27017
               protocol: TCP
+
+PersistentVolume and PersistentVolumeChaim
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Согласно глобальной идеалогии Kubernetes, не очень хорошо, когда надо указывать тип диска и тд. Для таких целей существует PersistentVolume и PersistentChaim. Весь алгоритм добавления тома устроен следующим образом.
+
+- Админ создает сетевое хранилище
+
+- Админ создает том PV и потом отправляет дескриптор PV в API Kubernetes. 
+
+- Пользователь создает заявку PVC. 
+
+- Kubernetes находит PV адекватного размера и связывает заявку с томом PV. 
+
+- Пользователь создает поду с томом, ссылающуюся на заявку PVC.
+
+Создание ресурса PersistentVolume делается по примеру следующего YAML файла
+
+.. code:: console
+
+        apiVersion: v1
+        kind: PersistentVolume
+        metadata:
+          name: mongodb-pv
+        spec:
+          capacity:
+            storage: 1Gi
+          acessModes:
+          - ReadWriteOnce
+          - ReadOnlyMany
+          persistentVolumeReclaimPolicy: Retain #после высвобождения заявки PersistentVolume должен быть сохранен
+          gcePersistentDisk: #(каким диском поддерживается)
+            pdName: mongodb
+            fsType: ext4 
+
+Теперь требуется создать заявку PersistentVolumeChaim. Пример такой заявки
+
+.. code:: console
+
+       apiVersion: v1
+       kind: PersistentVolumeChaim
+       metadata:
+         name: mongodb-pvc
+       spec:
+         resources:
+           requests:
+             storage: 1Gi
+         accessModes:
+         - ReadWriteOnce
+         storageClassName: ""
+
+после того, как выполнить команду ``kubectl get pvc`` в поле AccessModes может быть несколько режимов доступа
+
+- RWO - только одна нода может монтировать том для чтения
+ 
+- ROX - несколько нод могут монтировать том для чтения
+
+- RWX - несколько нод могут монтировать том как для чтения, так и для записи.
+
+Кроме того можно использовать заяку PersistentVolumeChaim внутри YAML файла, описывающего поду. Пример
+
+.. code:: console
+
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          name: mongodb
+        spec:
+          containers:
+          - image: mongo
+            name: mongodb
+            volumeMounts:
+            - name: mongodb-data
+              mountPath: /data/db
+            ports: 
+            - containerPort: 27017
+              protocol: TCP
+          volumes:
+          - name: mongodb-data
+            persistentVolumeClaim:
+              claimName: mongodb-pvc
+
+BestPractice является следующая схема. Администратор вместо того, чтобы создавать PersistentVolume может развернуть поставщика PersistentVolume и порделить несколько объектов StorageClass, чтобы позволить пользователям выбрать, какой тип ресурса PersistentVolume им больше всего подходит. Вместо предварительно резервирования кластера, админ может развренуть развернуть поставщика ресурсов PersistentVolume и определить несколько ресурсов StorageClass и позволить системе созадвать новый PersistentVolume всякий раз, когда один из них запрашивается с помощью заявки PersistentVolumeClaim. 
+.. code:: console
+
+        apiVersion: storage.k8s.io/v1
+        kind: StorageClass
+        metadata:
+          name: fast
+        provisioner: kubernetes.io/gce-pd # плагин тома, используемый для резервирования ресурса PV
+        parameters:
+          type: pd-ssd
+          zone: europe-west1-b # параметры, передаваемыем поставщику
+
+После создания ресурса StorageClass пользователи в своих заявках PersistentVolumeClaim могут ссылаться на класс хранилища по имени. Пример
+
+.. code:: console
+
+        apiVersion: v1
+        kind: PersistentVolumeClaim
+        metadata:
+          name: mongodb-pvc
+        spec:
+          storageClassName: fast
+          resources:
+            requests:
+              storage: 100Mi
+          accessModes:
+          - ReadWriteOnce
+
+
+
+
+
+
 
 Error codes
 ^^^^^^^^^^^
