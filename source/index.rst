@@ -25,6 +25,18 @@ Wlcome to my Documentation's documentation!
 
    nginx
 
+.. toctree::
+
+   :maxdepth: 1
+
+   postgresql
+
+.. toctree:: 
+
+   :maxdepth: 1
+
+   csharp
+
 Indices and tables
 ==================
 
