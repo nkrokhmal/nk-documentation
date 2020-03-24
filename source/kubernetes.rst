@@ -59,7 +59,14 @@ Command
 
 .. code:: console
 
-        kubectl get sc
+        $ kubectl get sc
+
+Для того, чтобы записать свою команду в историю ревизий
+
+.. code:: console
+
+        $ kubectl create -f file.yaml --record
+
 
 
 Help and information
@@ -867,8 +874,121 @@ BestPractice является следующая схема. Администр�
 
 
 
+Deployment
+^^^^^^^^^^
+
+Пример deloyments файла 
+
+.. code:: console
+
+        apiVersion: apps/v1beta1
+        kind: Deployment
+        metadata:
+          name: kubia
+        spec:
+          replicas: 3
+          template:
+            metadata:
+              name: kubia
+              labels:
+                app: kubia
+            spec:
+              containers:
+              - image: luksa/kubia:v1
+              name: nodejs
+
+Для того, чтобы поменять образ надо запустить команду
+
+.. code:: console
+
+        $ kubectl set image deployment kubia nodejs=luksa/kubia:v2
+
+Откат к передыдущей версии осуществляется с помощью команды
+
+.. code:: console
+
+        $ kubectl rollout undo deployment kubia
 
 
+Вывод истории выкатываний версий
+
+.. code:: console
+
+        $ kubectl rollout history deployment kubia
+
+Откат к определенной версии 
+
+.. code:: console
+
+        $ kubectl rollout undo deployment --to-revision=1
+
+Чтобы запустить канареечное развертывание (только часть модулей обновляем) необходимо выполнить ряд команд
+
+.. code:: console
+
+        $ kubectl set image deployment kubia nodejs=luksa/kubia:v4
+        $ kubectl rollout pause deployment kubia
+        $ kubectl rollout resume deployment kubia
+
+        
+maxSurge и maxUnavailable
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+На количество модулей, заменяемых одновременно во время deployment влияют 2 свойства. Пример
+
+.. code:: console
+
+        spec:
+          strategy:
+            rollingUpdate:
+              maxSurge: 1
+              maxUnavailable: 0
+            type: RollingUpdate
+
+maxSurge определяет, скольким экземплярам модуля вы позволяете существавать выше требуемого количества реплик. 
+
+maxUnavailable определяет, сколько экземпляров модуля может быть недоступно относительно требуемого количества реплик. 
+
+minReadySeconds позвляет задерживать развертывание на определенное количество секунд
+
+Развертывание с промощью проверки готовности
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Пример YAML файла
+
+.. code:: console
+
+        apiVersion: apps/v1beta1
+        kind: Deployment
+        metadata:
+          name: kubia
+        spec:
+          replicas: 3
+          minReadySeconds: 10
+          strategy:
+            rollingUpdate
+              maxSurge: 1
+              maxUnavailable: 0
+            type: RollingUpdate
+          template:
+            metadata:
+              name: kubia
+              labels:
+                app: kubia
+            spec:
+              containers:
+              - image: some/image
+              name: nodejs
+              readinessProbe: #(проверка готовности которая будет выполняться каждую секунду)
+                periodSeconds: 1
+                httpGet:
+                  path: /
+                  port: 8080
+
+
+
+          
+            
 
 Error codes
 ^^^^^^^^^^^
