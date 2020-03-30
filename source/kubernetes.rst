@@ -1537,6 +1537,207 @@ NetworkPolicy
             - port: 80
 
 
+Управление вычислительными ресурсами модулей
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Создание модуля с ресурсными запросами
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Пример создания модуля с ограничениями по ЦП и памяти
+
+.. code:: console
+
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          name: request-pod
+        spec:
+          containers:
+          - image: busybox
+            command: ["dd", "if=/dev/zero", "of=/dev/null"]
+            name: main
+            resources:
+              requests:
+                cpu: 200m
+                memory: 10Mi
+
+Контейнер запрашивает 200 миллиядер и 10 мебибайт памяти оперативной памяти. Для того, чтобы посмотреть потребление ЦП процессом
+
+.. code:: console
+
+        $ kubectl exec -it request-pod top
+
+Создание модуля с лимитами на ресурсы
+
+.. code:: console
+
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          name: limited-pod
+        spec:
+          containers:
+          - image: busybox
+            command: ["dd", "if=/dev/zero", "of=/dev/null"]
+            name: main
+            resoorces:
+              limit: 1
+              memory: 20Mi
+
+При этом разрешается перегрузка общих ресурсов узла. Когда процесс пытается выделить память сверх своих лимитов - процесс уничтожается. Если после перезапуска ничего не меняется несколько раз, то выводится статус CrashLoopBackOff. 
+
+Класс QoS модулей
+^^^^^^^^^^^^^^^^^
+
+Для того, чтобы сказать, какой из модулей удалять в случае большой нагрузки существует 3 класса качества обслуживания. BestEffort (самы низкий приоритет), Burstable, Guaranteed (самый высокий).
+
+BestEffort - те модули, которые не содержат в своей конфигурации никаких лимитов. Для того, чтобы создать модуль с Guaranteed нужно использовать
+
+- Запросы и лимиты как для процессора, так и для памяти
+
+- Нужно установить это для каждого контейнера
+
+- Они должны быть равными (Лимит = запросу).
+
+Если у нас имеются процессы с одинаковым классом Qos то уничтожается тот, кто имеет большую оценку OOM. Эта оценка вычисляется из двух факторов: процента доступной памяти и фиксированной корректировки оценки OOM, которая основана на классе QoS модуля и запрошенной памяти контейенра.  
+
+
+Установка стандартных запросов и лимитов для модулей в расчете на простанство имен. 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Если требуется устанавливать ресурсы для всех контейнеров, используют LimitRange. Пример создания LimitRange
+
+.. code:: console
+
+        apiVersion: v1
+        kind: LimitRange
+        metadata:
+          name: example
+        spec:
+          limits:
+          - type: Pod
+            min:
+              cpu: 50m
+              memory: 5Mi
+            max:
+              cpu: 1
+              memory: 1Gi
+          - type: Container
+            defaultRequest:
+              cpu: 200m
+              memory: 100Mi
+            default:
+              cpu: 200m
+              memory: 100Mi
+            min:
+              cpu: 50m
+              memory: 5Mi
+            max:
+              cpu: 1
+              memory: 1Gi
+            maxLimitRequestRatio
+              cpu: 4
+              memory: 10
+          - type: PersistentVolumeClaim
+            min:
+              storage: 1Gi
+            max:
+              storage: 10Gi
+
+Лимитирование общего объема ресурсов, доступных в пространстве имен
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Чтобы лимитировать пространства имен используется квота ресурсов ResourceQuota. Пример
+
+.. code:: console
+
+        apiVersion: v1
+        kind: ResourceQuota
+        metadata:
+          name: cpu-and-mem
+        spec:
+          hard:
+            requests.cpu: 400m
+            requests.memory: 200Mi
+            limits.cpu: 600m
+            limits.memory: 500Mi
+            requests.storage: 500Gi
+            ssd.storageclass.storage.k8s.io/requests.storage: 300Gi
+            standard.storageclass.k8s.io/request.storage.: 1Ti
+
+Мониторинг потребления ресурсов модуля
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Запуск Heapster
+
+.. code:: console
+
+        $ minikube addons enable headpster
+
+Вывод различной информации о поде или ноде
+
+.. code:: console
+
+        $ kubectl top node
+        $ kubectl top pod
+
+Для хранения всего используют InfluxDB - база данных временных рядов с открытым исходным кодом. 
+
+Автоматическое масштабирование модулей и узлов кластера
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Создание hpa
+
+.. code:: console
+
+        apiVersion: extensions/v1beta1
+        kind: Deployment
+        metadata:
+          name: kubia
+        spec:
+          replicas: 3
+          template:
+            metadata:
+              name: kubia
+              labels: 
+                app: kubia
+            spec:
+              containers:
+              - image: some/image
+                name: main
+                resources:
+                  requests:
+                    cpu: 100m
+
+Для такого деплоймента можно создать hpa файл
+
+.. code:: console
+
+        apiVersion: autoscaling/v2beta1
+        kind: HorizontalPodAutoScaler
+        metadata:
+          name: kubia
+          ...
+
+        spec:
+          maxReplicas: 5
+          metrics:
+          - resources:
+              name: cpu
+              targetAverageUtilizationL 30
+            type: Resource
+          minReplicas: 1
+          scaleTargetRef:
+            apiVersion: extensions/v1beta1
+            kind: Deployment
+            name: kubia
+        status:
+          currentMetrics: []
+          currentReplicas: 3
+          desiredReplicas: 0
+
+             
+            
 Error codes
 ^^^^^^^^^^^
 
