@@ -11,6 +11,12 @@ Wlcome to my Documentation's documentation!
 
    :maxdepth: 2
 
+   flask
+
+.. toctree::
+
+   :maxdepth: 2
+
    cmdfeatures
 
 .. toctree::
